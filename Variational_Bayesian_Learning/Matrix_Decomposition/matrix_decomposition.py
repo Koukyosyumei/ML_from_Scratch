@@ -22,6 +22,7 @@ class SVD:
 class VBMD(SVD):
     def __init__(self, sigma, ca_square, cb_square):
         """Variational_Bayesian_Matirx_Decomposition
+        https://jmlr.org/papers/v16/nakajima15a.html
         """
         super(VBMD, self).__init__()
         self.sigma = sigma
@@ -55,6 +56,7 @@ class VBMD(SVD):
 class EVBMD(SVD):
     def __init__(self, approximate_coefficient=2.5129):
         """Empirical_Variational_Bayesian_Matirx_Decomposition
+        https://jmlr.org/papers/v16/nakajima15a.html
         """
         super(EVBMD, self).__init__()
         self.approximate_coefficient = approximate_coefficient
