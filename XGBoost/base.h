@@ -21,6 +21,7 @@ struct Node
     double val, score, split;
     Node *left, *right;
 
+    Node() {}
     Node(vector<vector<double>> x_, vector<double> y_,
          vector<double> gradient_, vector<double> hessian_,
          vector<int> idxs_, double subsample_cols_, double min_child_weight_,
@@ -211,11 +212,15 @@ struct XGBoostTree
 {
     Node dtree;
 
+    XGBoostTree() {}
+
     void fit(vector<vector<double>> x, vector<double> y,
-             vector<double> gradient, vector<double> hessian,
-             vector<int> idxs, double subsample_cols, double min_child_weight,
-             double lam, double gamma, double eps, int min_leaf, int depth, bool use_ispure)
+             vector<double> gradient, vector<double> hessian, double subsample_cols,
+             double min_child_weight, double lam, double gamma, double eps,
+             int min_leaf, int depth, bool use_ispure)
     {
+        vector<int> idxs(y.size());
+        iota(idxs.begin(), idxs.end(), 0);
         dtree = Node(x = x, y = y, gradient = gradient, hessian = hessian,
                      idxs = idxs, subsample_cols = subsample_cols,
                      min_child_weight = min_child_weight, lam = lam,
