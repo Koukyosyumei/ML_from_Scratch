@@ -2,6 +2,7 @@
 #include <numeric>
 #include <limits>
 #include <set>
+#include <cmath>
 using namespace std;
 
 struct Node
@@ -19,7 +20,8 @@ struct Node
 
     int var_idx;
     double val, score, split;
-    Node *left, *right;
+    Node *left;
+    Node *right;
 
     Node() {}
     Node(vector<vector<double>> x_, vector<double> y_,
@@ -44,6 +46,9 @@ struct Node
         row_count = idxs.size();
         col_count = x.at(0).size();
 
+        column_subsample.resize(col_count);
+        iota(column_subsample.begin(), column_subsample.end(), 0);
+
         my_gradiet.resize(row_count);
         my_hessian.resize(row_count);
         for (int i = 0; i < row_count; i++)
@@ -52,13 +57,20 @@ struct Node
             my_hessian[i] = hessian[idxs[i]];
         }
 
-        double val = compute_weight();
+        val = compute_weight();
+        score = -1 * numeric_limits<double>::infinity();
+        find_varsplit();
     }
 
     double compute_weight()
     {
-        double sum_grad = accumulate(my_gradiet.begin(), my_gradiet.end(), 0);
-        double sum_hess = accumulate(my_hessian.begin(), my_hessian.end(), 0);
+        double sum_grad = 0;
+        double sum_hess = 0;
+        for (int i = 0; i < row_count; i++)
+        {
+            sum_grad += my_gradiet[i];
+            sum_hess += my_hessian[i];
+        }
         return -1 * (sum_grad / (sum_hess + lam));
     }
 
@@ -84,7 +96,7 @@ struct Node
                              (right_grad_sum * right_grad_sum) / (right_hess_sum + lam) -
                              ((left_grad_sum + right_grad_sum) *
                               (left_grad_sum + right_grad_sum) / (left_hess_sum + right_hess_sum + lam))) -
-                      lam;
+                      gamma;
         return gain;
     }
 
@@ -106,16 +118,10 @@ struct Node
                     right_idxs.push_back(idxs[i]);
             }
 
-            *left = Node(x = x, y = y,
-                         gradient = gradient, hessian = hessian,
-                         idxs = left_idxs, min_child_weight = min_child_weight,
-                         subsample_cols = subsample_cols, lam = lam, gamma = gamma,
-                         eps = eps, min_leaf = min_leaf, depth = depth, use_ispure = use_ispure);
-            *right = Node(x = x, y = y,
-                          gradient = gradient, hessian = hessian,
-                          idxs = right_idxs, min_child_weight = min_child_weight,
-                          subsample_cols = subsample_cols, lam = lam, gamma = gamma,
-                          eps = eps, min_leaf = min_leaf, depth = depth, use_ispure = use_ispure);
+            left = new Node(x, y, gradient, hessian, left_idxs, min_child_weight,
+                            subsample_cols, lam, gamma, eps, min_leaf, depth - 1, use_ispure);
+            right = new Node(x, y, gradient, hessian, right_idxs, min_child_weight,
+                             subsample_cols, lam, gamma, eps, min_leaf, depth - 1, use_ispure);
         }
     }
 
@@ -131,7 +137,7 @@ struct Node
             {
                 for (int i = 0; i < x_temp.size(); i++)
                 {
-                    if (x_temp[i] <= split)
+                    if (x_temp[i] <= x_temp[r])
                         left_idxs.push_back(idxs[i]);
                     else
                         right_idxs.push_back(idxs[i]);
@@ -165,12 +171,14 @@ struct Node
 
     bool is_leaf()
     {
-        return is_pure() || isinf(score) || depth <= 0;
+        return is_pure() || std::isinf(score) || depth <= 0;
     }
 
     bool is_pure()
     {
         vector<int> y_temp(row_count);
+        for (int i = 0; i < row_count; i++)
+            y_temp[i] = y[idxs[i]];
         set<int> y_set_temp(y_temp.begin(), y_temp.end());
         return use_ispure && y_set_temp.size() == 1;
     }
@@ -188,7 +196,10 @@ struct Node
         int x_new_size = x_new.size();
         vector<double> y_pred(x_new_size);
         for (int i = 0; i < x_new_size; i++)
-            y_pred.push_back(predict_row(x[i]));
+        {
+            auto temp_pred = predict_row(x[i]);
+            y_pred[i] = temp_pred;
+        }
         return y_pred;
     }
 
@@ -221,11 +232,9 @@ struct XGBoostTree
     {
         vector<int> idxs(y.size());
         iota(idxs.begin(), idxs.end(), 0);
-        dtree = Node(x = x, y = y, gradient = gradient, hessian = hessian,
-                     idxs = idxs, subsample_cols = subsample_cols,
-                     min_child_weight = min_child_weight, lam = lam,
-                     gamma = gamma, eps = eps, min_leaf = min_leaf,
-                     depth = depth, use_ispure = use_ispure);
+        dtree = Node(x, y, gradient, hessian, idxs, subsample_cols,
+                     min_child_weight, lam, gamma, eps, min_leaf,
+                     depth, use_ispure);
     }
 
     vector<double> predict(vector<vector<double>> X)

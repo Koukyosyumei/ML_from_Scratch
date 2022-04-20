@@ -1,7 +1,9 @@
 #include <vector>
 #include <iterator>
-#include <base.h>
-#include <utils.h>
+#include "base.h"
+#include "utils.h"
+#include <limits>
+#include <iostream>
 using namespace std;
 
 struct XGBoostBase
@@ -20,10 +22,12 @@ struct XGBoostBase
     vector<double> init_pred;
     vector<XGBoostTree> estimators;
 
-    XGBoostBase(double subsample_cols_, double min_child_weight_,
-                int depth_, int min_leaf_,
-                double learning_rate_, int boosting_rounds_,
-                double lam_, double gamma_, double eps_, bool use_ispure_)
+    XGBoostBase(double subsample_cols_ = 0.8,
+                double min_child_weight_ = -1 * numeric_limits<double>::infinity(),
+                int depth_ = 5, int min_leaf_ = 5,
+                double learning_rate_ = 0.4, int boosting_rounds_ = 5,
+                double lam_ = 1.5, double gamma_ = 1, double eps_ = 0.1,
+                bool use_ispure_ = true)
     {
         subsample_cols = subsample_cols_;
         min_child_weight = min_child_weight_;
@@ -47,7 +51,7 @@ struct XGBoostBase
     {
         int row_count = y.size();
         init_pred = get_init_pred(x, y);
-        vector<double> base_pred(row_count);
+        vector<double> base_pred;
         copy(init_pred.begin(), init_pred.end(), back_inserter(base_pred));
 
         for (int i = 0; i < boosting_rounds; i++)
@@ -56,12 +60,9 @@ struct XGBoostBase
             vector<double> hess = get_hess(base_pred, y);
 
             XGBoostTree boosting_tree = XGBoostTree();
-            boosting_tree.fit(x = x, y = y, grad = grad, hess = hess,
-                              depth = depth, min_leaf = min_leaf, lam = lam,
-                              gamma = gamma, eps = eps,
-                              min_child_weight = min_child_weight,
-                              subsample_cols, use_ispure);
-
+            boosting_tree.fit(x, y, grad, hess, subsample_cols,
+                              min_child_weight, lam, gamma,
+                              eps, min_leaf, depth, use_ispure);
             vector<double> pred_temp = boosting_tree.predict(x);
             for (int j = 0; j < row_count; j++)
                 base_pred[j] += learning_rate * pred_temp[j];
@@ -73,7 +74,7 @@ struct XGBoostBase
     vector<double> predict_raw(vector<vector<double>> X)
     {
         int row_count = X.size();
-        vector<double> y_pred(row_count);
+        vector<double> y_pred;
         copy(init_pred.begin(), init_pred.end(), back_inserter(y_pred));
         int estimators_num = estimators.size();
         for (int i = 0; i < estimators_num; i++)
