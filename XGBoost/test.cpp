@@ -69,7 +69,7 @@ int main()
         assert(idxs_left[i] == test_idxs_left[i]);
     assert(clf.estimators[0].dtree.left->is_pure());
     assert(clf.estimators[0].dtree.left->is_leaf());
-    assert(abs(clf.estimators[0].dtree.left->val - 0.5074890528001861) < 1e-5);
+    assert(clf.estimators[0].dtree.left->val == 0.5074890528001861);
 
     vector<int> test_idxs_right = {1, 3, 4, 5, 6};
     vector<int> idxs_right = clf.estimators[0].dtree.right->idxs;
@@ -77,26 +77,42 @@ int main()
         assert(idxs_right[i] == test_idxs_right[i]);
     assert(!clf.estimators[0].dtree.right->is_pure());
     assert(!clf.estimators[0].dtree.right->is_leaf());
+    assert(clf.estimators[0].dtree.right->val == -0.8347166357912786);
+    assert(clf.estimators[0].dtree.right->var_idx == 1);
 
-    assert(abs(clf.estimators[0].dtree.compute_gain(clf.estimators[0].dtree.left->idxs,
-                                                    clf.estimators[0].dtree.right->idxs) -
-               0.7556769418984197) < 1e-5);
+    assert(clf.estimators[0].dtree.compute_gain(clf.estimators[0].dtree.left->idxs,
+                                                clf.estimators[0].dtree.right->idxs) ==
+           0.7556769418984197);
 
-    cout << clf.estimators[0].dtree.left->val << endl;
+    assert(clf.estimators[0].dtree.right->right->split == 25);
+    assert(clf.estimators[0].dtree.right->right->var_idx == 0);
 
-    cout << clf.estimators[0].dtree.right->var_idx << endl;
-    cout << clf.estimators[0].dtree.right->right->split << endl;
-    cout << clf.estimators[0].dtree.right->right->var_idx << endl;
+    assert(clf.estimators[0].dtree.right->right->left->is_leaf());
+    assert(clf.estimators[0].dtree.right->right->right->is_leaf());
+    assert(clf.estimators[0].dtree.right->right->left->val == 0.3860706492904221);
+    assert(clf.estimators[0].dtree.right->right->right->val == -0.6109404045885225);
 
-    cout << clf.estimators[0].dtree.left->row_count << endl;
-    cout << clf.estimators[0].dtree.right->row_count << endl;
+    vector<double> predict_raw = clf.predict_raw(X);
+    vector<double> test_predcit_raw = {1.38379341,
+                                       0.53207456,
+                                       1.38379341,
+                                       0.22896408,
+                                       1.29495549,
+                                       1.29495549,
+                                       0.22896408,
+                                       1.38379341};
+    for (int i = 0; i < test_predcit_raw.size(); i++)
+        assert((predict_raw[i] - test_predcit_raw[i]) < 1e-6);
 
-    for (auto g : clf.estimators[0].dtree.left->my_gradiet)
-        cout << g << " ";
-    cout << endl;
-
-    for (auto p : clf.predict_proba(X))
-        cout << p << " ";
-    cout << endl;
-    // assert(clf.estimators[0].dtree.right->var_idx == 1);
+    vector<double> predict_proba = clf.predict_proba(X);
+    vector<double> test_predcit_proba = {0.79959955,
+                                         0.62996684,
+                                         0.79959955,
+                                         0.55699226,
+                                         0.78498478,
+                                         0.78498478,
+                                         0.55699226,
+                                         0.79959955};
+    for (int i = 0; i < test_predcit_proba.size(); i++)
+        assert(abs(predict_proba[i] - test_predcit_proba[i]) < 1e-6);
 }

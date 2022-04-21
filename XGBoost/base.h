@@ -81,15 +81,15 @@ struct Node
         double left_hess_sum = 0;
         double right_hess_sum = 0;
 
-        for (int i = 0; i < left_idxs.size(); i++)
+        for (int j = 0; j < left_idxs.size(); j++)
         {
-            left_grad_sum += my_gradiet[left_idxs[i]];
-            left_hess_sum += my_hessian[left_idxs[i]];
+            left_grad_sum += my_gradiet[left_idxs[j]];
+            left_hess_sum += my_hessian[left_idxs[j]];
         }
-        for (int i = 0; i < right_idxs.size(); i++)
+        for (int j = 0; j < right_idxs.size(); j++)
         {
-            right_grad_sum += my_gradiet[right_idxs[i]];
-            right_hess_sum += my_hessian[right_idxs[i]];
+            right_grad_sum += my_gradiet[right_idxs[j]];
+            right_hess_sum += my_hessian[right_idxs[j]];
         }
 
         double gain = 0.5 * ((left_grad_sum * left_grad_sum) / (left_hess_sum + lam) +
@@ -118,10 +118,10 @@ struct Node
                     right_idxs.push_back(idxs[i]);
             }
 
-            left = new Node(x, y, gradient, hessian, left_idxs, min_child_weight,
-                            subsample_cols, lam, gamma, eps, min_leaf, depth - 1, use_ispure);
-            right = new Node(x, y, gradient, hessian, right_idxs, min_child_weight,
-                             subsample_cols, lam, gamma, eps, min_leaf, depth - 1, use_ispure);
+            left = new Node(x, y, gradient, hessian, left_idxs, subsample_cols, min_child_weight,
+                            lam, gamma, eps, min_leaf, depth - 1, use_ispure);
+            right = new Node(x, y, gradient, hessian, right_idxs, subsample_cols, min_child_weight,
+                             lam, gamma, eps, min_leaf, depth - 1, use_ispure);
         }
     }
 
@@ -131,16 +131,16 @@ struct Node
         {
             int var_idx_temp = column_subsample[i];
             vector<double> x_temp = split_col(var_idx_temp);
-            vector<int> left_idxs, right_idxs;
 
             for (int r = 0; r < row_count; r++)
             {
-                for (int i = 0; i < x_temp.size(); i++)
+                vector<int> left_idxs, right_idxs;
+                for (int j = 0; j < x_temp.size(); j++)
                 {
-                    if (x_temp[i] <= x_temp[r])
-                        left_idxs.push_back(idxs[i]);
+                    if (x_temp[j] <= x_temp[r])
+                        left_idxs.push_back(j);
                     else
-                        right_idxs.push_back(idxs[i]);
+                        right_idxs.push_back(j);
                 }
 
                 int left_size = left_idxs.size();
@@ -148,9 +148,9 @@ struct Node
                 double hessian_left_sum = 0;
                 double hessian_right_sum = 0;
                 for (int j = 0; j < left_size; j++)
-                    hessian_left_sum += hessian[left_idxs[j]];
+                    hessian_left_sum += my_hessian[left_idxs[j]];
                 for (int j = 0; j < right_size; j++)
-                    hessian_right_sum += hessian[right_idxs[j]];
+                    hessian_right_sum += my_hessian[right_idxs[j]];
 
                 if (left_size < min_leaf ||
                     right_size < min_leaf ||
@@ -187,7 +187,7 @@ struct Node
     {
         vector<double> x_column(row_count);
         for (int i = 0; i < row_count; i++)
-            x_column[i] = x[i][column_idx];
+            x_column[i] = x[idxs[i]][column_idx];
         return x_column;
     }
 
